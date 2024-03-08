@@ -1,0 +1,11 @@
+{% extends 'layout.html' %}
+ 
+{% block body %}
+  <h1>Assets</h1>
+  <ul class="list-group">
+    {% for asset in assets %}
+      <li class="list-group-item"><a href="asset/{{asset.id}}">{{asset.name}}</a>&nbsp;-> &nbsp; &nbsp;  &nbsp;{{asset.quantity}}</li>
+    {% endfor %}
+  </ul>
+{% endblock %}
+

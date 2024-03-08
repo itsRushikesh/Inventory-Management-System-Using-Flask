@@ -1,0 +1,10 @@
+{% extends 'layout.html' %}
+ 
+{% block body %}
+  <h1>{{asset.name}}</h1>
+  <small>added by {{asset.user}}</small>
+  <hr>
+  <div>
+    {{asset.body | safe}}
+  </div>
+{% endblock %}
