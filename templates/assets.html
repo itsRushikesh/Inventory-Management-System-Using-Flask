@@ -1,11 +1,133 @@
 {% extends 'layout.html' %}
  
 {% block body %}
+<!-- <script>
+  function myFunction() {
+      var input, filter, ul, li, a, i, txtValue;
+      input = document.getElementById("myInput");
+      filter = input.value.toUpperCase();
+      ul = document.getElementById("myUL");
+      li = ul.getElementsByTagName("li");
+      for (i = 0; i < li.length; i++) {
+          a = li[i].getElementsByTagName("a")[0];
+          txtValue = a.textContent || a.innerText;
+          if (txtValue.toUpperCase().indexOf(filter) > -1) {
+              li[i].style.display = "";
+          } else {
+              li[i].style.display = "none";
+          }
+      }
+  }
+  </script> -->
+
+  <!-- <script>
+    function myFunction() {
+      // Declare variables
+      var input, filter, table, tr, td, i, txtValue;
+      input = document.getElementById("myInput");
+      filter = input.value.toUpperCase();
+      table = document.getElementById("myTable");
+      tr = table.getElementsByTagName("tr");
+    
+      // Loop through all table rows, and hide those who don't match the search query
+      for (i = 0; i < tr.length; i++) {
+        td1 = tr[i].getElementsByClassName("td1")[0];
+        td2 = tr[i].getElementsByClassName("td2")[0];
+        if (td1) {
+          txtValue = td1.textContent || td1.innerText;
+          if (txtValue.toUpperCase().indexOf(filter) > -1) {
+            tr[i].style.display = "";
+          } else {
+            tr[i].style.display = "none";
+          }
+        }
+        if (td2) { 
+          txtValue = td2.textContent || td2.innerText;
+          if (txtValue.toUpperCase().indexOf(filter) > -1) {
+            tr[i].style.display = "";
+          } else {
+            tr[i].style.display = "none";
+          }
+        }
+      }
+    }
+    </script>
+  
+
+
+
+  <script>
+    function myFunction() {
+      // Declare variables
+      var input, filter, table, tr, td, i, txtValue;
+      input = document.getElementById("myInput");
+      filter = input.value.toUpperCase();
+      table = document.getElementById("myTable");
+      tr = table.getElementsByTagName("tr");
+    
+      // Loop through all table rows, and hide those who don't match the search query
+      for (i = 0; i < tr.length; i++) {
+        td = tr[i].getElementsById("td2")[0];
+        if (td) {
+          txtValue = td.textContent || td.innerText;
+          if (txtValue.toUpperCase().indexOf(filter) > -1) {
+            tr[i].style.display = "";
+          } else {
+            tr[i].style.display = "none";
+          }
+        }
+      }
+    }
+    </script> -->
+
+
+
+<!-- ------------------------------------------------------ -->
   <h1>Assets</h1>
-  <ul class="list-group">
+  <input type="text" id="myInput" onkeyup="myFunction()" placeholder="Search for name or user..." title="Type in a name">
+
+
+  <!-- <ul class="list-group" id = "myUL">
     {% for asset in assets %}
       <li class="list-group-item"><a href="asset/{{asset.id}}">{{asset.name}}</a>&nbsp;-> &nbsp; &nbsp;  &nbsp;{{asset.quantity}}</li>
     {% endfor %}
-  </ul>
+  </ul> -->
+
+  <table class="table table-striped" id = "myTable">
+    <tbody id = "mtable">
+    <tr>
+      <th>User</th>
+      <th>Name</th>
+      <th>quantity</th>
+      <!-- <th>Action</th> -->
+
+    </tr>
+    {% for asset in assets %}   
+      <tr>
+        <td >{{asset.user}}</td>
+        <td>{{asset.name}}</td>
+        <td>{{asset.quantity}}</td>
+        <!-- <td>  {% if session.role != "Engineer" and session.role != "Manager" %}
+          <form action="{{url_for('asset', id=asset.id)}}" method="post">
+            <input type="hidden" name="_method" value="DELETE">
+            <input type="submit" value="Delete" class="btn btn-danger">
+          </form>
+        {% endif %}</td> -->
+
+        
+      </tr>
+    {% endfor %}
+  </tbody>  
+  </table>
+  <script>
+    $(document).ready(function () {
+        $("#myInput").on("keyup", function () {
+            var value = $(this).val().toLowerCase();
+            $("#mtable tr").filter(function () {
+                $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+            });
+        });
+    });
+</script>
 {% endblock %}
 

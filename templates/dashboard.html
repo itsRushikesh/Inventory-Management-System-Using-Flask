@@ -19,12 +19,16 @@
         <td>{{asset.name}}</td>
         <td>{{asset.user}}</td>
         <td>{{asset.quantity}}</td>
-        <td><a href="edit_asset/{{asset.id}}" class="btn btn-default pull-right">Edit</a></td>
+        {% if session.role != "Engineer"%}
+          <td><a href="edit_asset/{{asset.id}}" class="btn btn-default pull-right"><button value="Delete" href="edit_asset/{{asset.id}}" class="btn btn-danger">Edit</button></a></td>
+        {% endif %}
         <td>
+        {% if session.role != "Engineer" and session.role != "Manager" %}
           <form action="{{url_for('delete_asset', id=asset.id)}}" method="post">
             <input type="hidden" name="_method" value="DELETE">
             <input type="submit" value="Delete" class="btn btn-danger">
           </form>
+        {% endif %}
         </td>
       </tr>
     {% endfor %}

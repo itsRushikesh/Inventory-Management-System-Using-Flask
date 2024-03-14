@@ -1,7 +1,8 @@
 from flask import Flask, render_template, flash, redirect, url_for, session, request, logging
 from flask_mysqldb import MySQL
 import MySQLdb.cursors
-from wtforms import Form, StringField, PasswordField, validators, SelectField, IntegerField
+from wtforms import Form, StringField, PasswordField, validators, SelectField, IntegerField, EmailField
+from wtforms.validators import Length, Regexp
 from passlib.hash import sha256_crypt
 from functools import wraps
  
@@ -19,13 +20,16 @@ mysql = MySQL(app)
 
   
 
-role_list = ['Engineer', 'Manager', 'Admin']
+role_list = ['Engineer', 'Manager']
 class RegisterForm(Form):
     role = SelectField('Role',choices=role_list)
     name = StringField('Name', [validators.Length(min=1, max=50)])
     username = StringField('Username', [validators.Length(min=4, max=25)])
-    email = StringField('Email', [validators.Length(min=6, max=50)])
+    email = EmailField('Email', [validators.Length(min=6, max=50)])
     password = PasswordField('Password', [validators.DataRequired(),
+        validators.Length(min=8, max=15, message='Password must be between 8 and 15 characters'),
+        validators.Regexp('^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,15}$',
+               message='Password must contain at least one symbol, one uppercase letter, one lowercase letter, and one number'),                               
         validators.EqualTo('confirm', message='Passwords do not match')
     ])
     confirm = PasswordField('Confirm Password')
@@ -70,10 +74,11 @@ def assets():
 def asset(id):
     # Create cursor
     cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-  
+    
     # Get asset
-    result = cursor.execute("SELECT * FROM assets WHERE id = %s", [id])
+    cursor.execute("SELECT * FROM assets WHERE id = %s", [id])
     asset = cursor.fetchone()
+    
     return render_template('asset.html', asset=asset)
   
 # User Register
@@ -89,16 +94,20 @@ def register():
           
         
         cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-        # Create a new record
-        cursor.execute("INSERT INTO `accounts` (name, email, username, password, role) VALUES(%s, %s, %s, %s, %s)", (name, email, username, password, role))
+        check_user_exist = cursor.execute("SELECT * FROM accounts WHERE username = %s or email = %s",(username,email))
+        if check_user_exist > 0:
+            flash('user already exist','danger')
+        else:
+            # Create a new record
+            cursor.execute("INSERT INTO `accounts` (name, email, username, password, role) VALUES(%s, %s, %s, %s, %s)", (name, email, username, password, role))
 
-                
-        # Commit to DB
-        mysql.connection.commit()
-        # Close connection
-        cursor.close()
-        flash('You are now registered and can log in', 'success')
-        return redirect(url_for('login'))
+                    
+            # Commit to DB
+            mysql.connection.commit()
+            # Close connection
+            cursor.close()
+            flash('You are now registered and can log in', 'success')
+            return redirect(url_for('login'))
     return render_template('register.html', form=form)
  
 # User login
@@ -124,6 +133,7 @@ def login():
             if sha256_crypt.verify(password_candidate, password) and role_candidate == role:
                 # Passed
                 session['logged_in'] = True
+                session['role'] = role
                 session['username'] = username
   
                 flash('You are now logged in', 'success')
@@ -193,13 +203,29 @@ def add_asset():
         cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
   
         # Execute
-        cursor.execute("INSERT INTO assets(name, quantity, user) VALUES(%s, %s, %s)",(name, quantity, session['username']))
-        # Commit to DB
-        mysql.connection.commit()
-        #Close connection
-        cursor.close()
-        flash('asset Created', 'success')
-        return redirect(url_for('dashboard'))
+        check_asset = cursor.execute("SELECT * FROM assets WHERE name = %s",[name])
+        # data = cursor.fetchall()
+        if check_asset >  0:
+            cursor.execute("SELECT quantity FROM assets WHERE name = %s",[name])
+            qty = cursor.fetchone()
+            print(qty)
+            qty1 = (qty['quantity'])
+            new_qty = qty1 + quantity
+            cursor.execute("UPDATE assets SET quantity = %s WHERE name = %s",(new_qty, name))
+            # Commit to DB
+            mysql.connection.commit()
+            #Close connection
+            cursor.close()
+            flash('asset updated', 'success')
+            return redirect(url_for('dashboard'))
+        else:
+            cursor.execute("INSERT INTO assets(name, quantity, user) VALUES(%s, %s, %s)",(name, quantity, session['username']))
+            # Commit to DB
+            mysql.connection.commit()
+            #Close connection
+            cursor.close()
+            flash('asset Created', 'success')
+            return redirect(url_for('dashboard'))
     return render_template('add_asset.html', form=form)
  
 # Edit asset
@@ -225,14 +251,20 @@ def edit_asset(id):
         # Create Cursor
         cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
         app.logger.info(name)
+        #check asset
+        check_asset = cursor.execute("SELECT * FROM assets WHERE name = %s",[name])
+        # data = cursor.fetchall()
+        if check_asset >  0:
+            flash('asset already exist')
         # Execute
-        cursor.execute ("UPDATE assets SET name=%s, quantity=%s WHERE id=%s",(name, quantity, id))
-        # Commit to DB
-        mysql.connection.commit()
-        #Close connection
-        cursor.close()
-        flash('asset Updated', 'success')
-        return redirect(url_for('dashboard'))
+        else:
+            cursor.execute ("UPDATE assets SET name=%s, quantity=%s WHERE id=%s",(name, quantity, id))
+            # Commit to DB
+            mysql.connection.commit()
+            #Close connection
+            cursor.close()
+            flash('asset Updated', 'success')
+            return redirect(url_for('dashboard'))
     return render_template('edit_asset.html', form=form)
   
   
