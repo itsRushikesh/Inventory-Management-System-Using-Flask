@@ -1,24 +1,28 @@
 from flask import Flask, render_template, flash, redirect, url_for, session, request, logging
 from flask_mysqldb import MySQL
 import MySQLdb.cursors
-from wtforms import Form, StringField, PasswordField, validators, SelectField, IntegerField, EmailField
+from wtforms import Form, StringField,PasswordField,FileField, validators, SelectField, IntegerField, EmailField
 from wtforms.validators import Length, Regexp
+from flask_wtf import FlaskForm
 from passlib.hash import sha256_crypt
 from functools import wraps
- 
+import os
+from werkzeug.utils import secure_filename
+import logging
+
+
+UPLOAD_FOLDER = 'uploads'
+# ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'} 
 app = Flask(__name__)
 app.secret_key = "Cairocoders-Ednalan"
   
-   
-
 app.config['MYSQL_USER'] = 'root'
 app.config['MYSQL_PASSWORD'] = '123456'
 app.config['MYSQL_DB'] = 'testingdb'
 app.config['MYSQL_HOST'] = 'localhost'
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 mysql = MySQL(app)
-
-  
 
 role_list = ['Engineer', 'Manager']
 class RegisterForm(Form):
@@ -32,12 +36,13 @@ class RegisterForm(Form):
                message='Password must contain at least one symbol, one uppercase letter, one lowercase letter, and one number'),                               
         validators.EqualTo('confirm', message='Passwords do not match')
     ])
+    file = FileField()
     confirm = PasswordField('Confirm Password')
- 
-# asset Form Class
+
 class InventoryForm(Form):
     name = StringField('name', [validators.Length(min=1, max=200)])
     quantity = IntegerField('quantity')
+    file = FileField('file')
   
 # Index
 @app.route('/')
@@ -52,12 +57,7 @@ def about():
 # assets
 @app.route('/assets')
 def assets():
-    # Create cursor
-    # conn = pymysql.connect()
-    # cur = conn.cursor(pymysql.cursors.DictCursor)
     cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-    
-  
     # Get assets
     result = cursor.execute("SELECT * FROM assets")
     assets = cursor.fetchall()
@@ -74,39 +74,42 @@ def assets():
 def asset(id):
     # Create cursor
     cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-    
     # Get asset
     cursor.execute("SELECT * FROM assets WHERE id = %s", [id])
     asset = cursor.fetchone()
-    
     return render_template('asset.html', asset=asset)
-  
+
+#register2
+@app.route('/register2', methods = ['GET', 'POST'])
+def register2():
+    return render_template('register.html')
+
+@app.route('/login2', methods = ['GET', 'POST'])
 # User Register
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     form = RegisterForm(request.form)
     if request.method == 'POST' and form.validate():
         name = form.name.data
-        email = form.email.data
+        email   = form.email.data
         username = form.username.data
         password = sha256_crypt.encrypt(str(form.password.data))
-        role = form.role.data
-          
-        
+        role = form.role.data   
         cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-        check_user_exist = cursor.execute("SELECT * FROM accounts WHERE username = %s or email = %s",(username,email))
-        if check_user_exist > 0:
-            flash('user already exist','danger')
+        check_user_acc = cursor.execute("SELECT * FROM accounts WHERE username = %s or email = %s",(username,email))
+        check_user_req = cursor.execute("SELECT * FROM request  WHERE username = %s or email = %s",(username,email))
+        if check_user_acc > 0:
+            flash('User already registered','danger')
+        elif check_user_req>0:
+            flash('User request has already sent','danger')
         else:
             # Create a new record
-            cursor.execute("INSERT INTO `accounts` (name, email, username, password, role) VALUES(%s, %s, %s, %s, %s)", (name, email, username, password, role))
-
-                    
+            cursor.execute("INSERT INTO `request` (name, email, username, password, role) VALUES(%s, %s, %s, %s, %s)", (name, email, username, password, role))    
             # Commit to DB
             mysql.connection.commit()
             # Close connection
             cursor.close()
-            flash('You are now registered and can log in', 'success')
+            flash('Request has been sent to admin', 'success')
             return redirect(url_for('login'))
     return render_template('register.html', form=form)
  
@@ -114,12 +117,9 @@ def register():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        # Get Form Fields
-        role_candidate = request.form['role']
         username = request.form['username']
         password_candidate = request.form['password']
         cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-  
         # Get user by username
         result = cursor.execute("SELECT * FROM accounts WHERE username = %s", [username])
   
@@ -130,7 +130,7 @@ def login():
             password = data['password']
   
             # Compare Passwords
-            if sha256_crypt.verify(password_candidate, password) and role_candidate == role:
+            if sha256_crypt.verify(password_candidate, password):
                 # Passed
                 session['logged_in'] = True
                 session['role'] = role
@@ -167,23 +167,26 @@ def logout():
     session.clear()
     flash('You are now logged out', 'success')
     return redirect(url_for('login'))
-  
+ 
+ 
 # Dashboard
 @app.route('/dashboard')
 @is_logged_in
 def dashboard():
-    # Create cursor
     cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-  
-    # Get assets
-    #result = cur.execute("SELECT * FROM assets")
-    # Show assets only from the user logged in 
-    result = cursor.execute("SELECT * FROM assets WHERE user = %s", [session['username']])
-  
+
+    if session['role'] == 'admin':
+        result = cursor.execute("SELECT * FROM assets")
+    else:
+        result = cursor.execute("SELECT * FROM assets WHERE user = %s", [session['username']])
+        
     assets = cursor.fetchall()
-  
-    if result > 0:
-        return render_template('dashboard.html', assets=assets)
+    
+    result2 = cursor.execute("SELECT * FROM request WHERE status = 'pending'")
+    requests = cursor.fetchall()
+   
+    if result > 0 or result2 > 0:
+        return render_template('dashboard.html', assets=assets, requests = requests)
     else:
         msg = 'No assets Found'
         return render_template('dashboard.html', msg=msg)
@@ -198,10 +201,9 @@ def add_asset():
     if request.method == 'POST' and form.validate():
         name = form.name.data
         quantity = form.quantity.data
-  
+        file = request.files['file']
         # Create Cursor
         cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-  
         # Execute
         check_asset = cursor.execute("SELECT * FROM assets WHERE name = %s",[name])
         # data = cursor.fetchall()
@@ -216,6 +218,12 @@ def add_asset():
             mysql.connection.commit()
             #Close connection
             cursor.close()
+            if file.filename == '':
+                flash('No selected file')
+                return redirect(url_for('add_asset'))
+            if file:
+                filename = secure_filename(file.filename)
+                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
             flash('asset updated', 'success')
             return redirect(url_for('dashboard'))
         else:
@@ -224,57 +232,99 @@ def add_asset():
             mysql.connection.commit()
             #Close connection
             cursor.close()
+            if file.filename == '':
+                flash('No selected file')
+                return redirect(url_for('add_asset'))
+            if file:
+                filename = secure_filename(file.filename)
+                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
             flash('asset Created', 'success')
             return redirect(url_for('dashboard'))
-    return render_template('add_asset.html', form=form)
- 
+    return render_template('add_asset.html', form=form) 
 # Edit asset
 @app.route('/edit_asset/<string:id>', methods=['GET', 'POST'])
 @is_logged_in
 def edit_asset(id):
-    # Create cursor
-    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-  
-    # Get asset by id
-    result = cursor.execute("SELECT * FROM assets WHERE id = %s", [id])
-    asset = cursor.fetchone()
-    cursor.close()
-    # Get form
     form = InventoryForm(request.form)
-    # Populate asset form fields
-    form.name.data = asset['name']
-    form.quantity.data = asset['quantity']
-  
-    if request.method == 'POST' and form.validate():
-        name = request.form['name']
-        quantity = request.form['quantity']
-        # Create Cursor
+    if request.method == 'POST':
+        quantity = form.quantity.data
+         # Create Cursor
         cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-        app.logger.info(name)
-        #check asset
-        check_asset = cursor.execute("SELECT * FROM assets WHERE name = %s",[name])
-        # data = cursor.fetchall()
-        if check_asset >  0:
-            flash('asset already exist')
+  
         # Execute
-        else:
-            cursor.execute ("UPDATE assets SET name=%s, quantity=%s WHERE id=%s",(name, quantity, id))
+        check_asset = cursor.execute("SELECT quantity FROM assets WHERE id = %s",[id])
+        
+        # check_asset = cursor.fetchone()
+        print(check_asset)
+        if check_asset >  0:    
+            cursor.execute("SELECT quantity FROM assets WHERE id = %s",[id])
+            mysql.connection.commit()
+            qty = cursor.fetchall()
+            print(qty)
+            qty1 = qty[0]
+            qty2 = qty1['quantity']
+            print(qty2)
+            new_qty = qty2 - quantity
+            cursor.execute("UPDATE assets SET quantity = %s WHERE id = %s",(new_qty, id))
             # Commit to DB
             mysql.connection.commit()
             #Close connection
             cursor.close()
-            flash('asset Updated', 'success')
+            flash('asset consumed', 'success')
+            return redirect(url_for('dashboard'))
+            
+        else:
+            flash("Insufficient Assets",'danger')
             return redirect(url_for('dashboard'))
     return render_template('edit_asset.html', form=form)
-  
-  
+            
+#Approve request
+@app.route('/approve_request/<string:id>', methods = ['POST'])
+@is_logged_in
+def approve_request(id):
+    # Create cursor
+    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)  
+    cursor.execute("SELECT name, email, username, password, role FROM request WHERE id = %s",[id])
+    mysql.connection.commit()
+    record_req = cursor.fetchall()
+    print(len(record_req))
+    nested_record = record_req[0]
+    name = nested_record['name']
+    email = nested_record['email']
+    username = nested_record['username']
+    password = nested_record['password']
+    role = nested_record['role']
+    if len(record_req) >  0 :
+        cursor.execute("INSERT INTO `accounts` (name, email, username, password, role) VALUES(%s, %s, %s, %s, %s)", (name, email, username, password, role))
+        cursor.execute("UPDATE request SET status = 'approved' WHERE id = %s",[id])
+        mysql.connection.commit()
+    mysql.connection.commit()
+    #Close connection
+    cursor.close()
+    flash('Request Approved', 'success')
+    return redirect(url_for('dashboard'))
+
+#Reject request
+@app.route('/reject_request/<string:id>', methods = ['POST'])
+@is_logged_in
+def reject_request(id):
+    # Create cursor 
+    print(id)
+    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    cursor.execute("UPDATE request SET status = 'rejected' WHERE id = %s",[id])
+     # Commit to DB
+    mysql.connection.commit()
+    #Close connection
+    cursor.close()
+    flash('Request Rejected', 'success')
+    return redirect(url_for('dashboard'))
+    
 # Delete asset
 @app.route('/delete_asset/<string:id>', methods=['POST'])
 @is_logged_in
 def delete_asset(id):
     # Create cursor
     cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-  
     # Execute
     cursor.execute("DELETE FROM assets WHERE id = %s", [id])
     # Commit to DB

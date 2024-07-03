@@ -3,13 +3,18 @@
 {% block body %}
   <h1>Add asset</h1>
   {% from "includes/_formhelpers.html" import render_field %}
-  <form method="POST" action="">
+  <form method="POST" action="" enctype="multipart/form-data">
     <div class="form-group">
       {{ render_field(form.name, class_="form-control") }}
     </div>
     <div class="form-group">
       {{ render_field(form.quantity, class_="form-control", id="editor") }}
+    </div>    
+    <div>
+      <!-- {{ render_field(form.file, class='form-control') }} -->
+      <input type="file" class="form-control" id="file", name ='file'/>
     </div>
-    <p><input class="btn btn-primary" type="submit" value="Submit">
+    
+    <input class="btn btn-primary" type="submit" value="Submit">
   </form>
 {% endblock %}

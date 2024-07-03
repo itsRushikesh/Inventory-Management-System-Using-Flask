@@ -2,12 +2,129 @@
 {% extends 'layout.html' %}
  
 {% block body %}
-  <div class="jumbotron text-center">
-    <h2>Welcome to Inventory Management System</h2>
+  <!-- <div class="jumbotron text-center"> -->
+    
     <!-- <p class="lead">Python Flask CRUD (Create, read, update and delete) Simple application with authentication and Mysql</p> -->
     {% if session.logged_in == NULL %}
-      <a href="/register" class="btn btn-primary btn-lg">Register</a>
-      <a href="/login" class="btn btn-success btn-lg">Login</a>
-    {% endif %}
+    <div class="container" id="container">
+      <div class="form-container sign-up">
+        
+        <div id ="content">
+          
+          <form action="{{ url_for('register') }}" method='POST' onsubmit="verifyPassword()">
+            <div >
+              <h1><br>Register</h1>
+            </div>
+          
+            <div class="input-group mb-3">
+             <div><label class="input-group-text" for="inputGroupSelect01">Select Role</label></div> 
+              <select class="form-select" id="inputGroupSelect01" name='role'>
+          
+                <option value="Engineer">Engineer</option>
+                <option value="Manager">Manager</option>
+                <!-- <option value="Admin">Admin</option> -->
+              </select>
+            </div>
+            <div class="mb-3 row">
+              <!-- <label for="Name" class="col-sm-2 col-form-label">user name</label> -->
+              <div class="col-sm-10">
+                <input type="text" class="form-control" name='name' placeholder="Enter name">
+              </div>
+            </div>
+            <div class="mb-3 row">
+              <!-- <label for="Name" class="col-sm-2 col-form-label">user name</label> -->
+              <div class="col-sm-10">
+                <input type="text" class="form-control" name='username' placeholder="Enter username">
+              </div>
+            </div>
+            
+            <div class="mb-3 row">
+              <!-- <label for="inputPassword" class="col-sm-2 col-form-label">Password</label> -->
+              <div class="col-sm-10">
+                <input type='password' class="form-control" id='password' name='password' placeholder="Password">
+                 
+              </div>
+            </div>
+            <div class="mb-3 row">
+              <!-- <label for="inputPassword" class="col-sm-2 col-form-label">Confirm Password</label> -->
+              <div class="col-sm-10">
+                <input type='password' class="form-control" id='confirm' name='confirm'
+                  placeholder="Re-enter Password">
+              </div>
+            </div>
+          
+            <div class="mb-3 row">
+              <!-- <label for="Email" class="col-sm-2 col-form-label">Email</label> -->
+              <div class="col-sm-10">
+                <input type="email" class="form-control" name='email' placeholder="enter email">
+              </div>
+            </div>
+          
+            <div class="col-sm-10">
+              <input type="submit" class="btn btn-primary mb-3" value="Register"></input>
+              
+            </div>
+            <span id = 'message' style="color:red"> {{msg}}</span> <br><br> 
+          </form>
+              
+        </div>
+        
+      </div>
+      <div class="form-container sign-in">
+        <div id = "content2">
+          <form action="{{ url_for('login')}}" method = 'POST'>
+            <div>
+              <h1><br><br><br><br><br>Login page</h1>
+            </div>
+            
+          
+            <div class="mb-3 row">
+              <!-- <label for="User name" class="col-sm-2 col-form-label">User name</label> -->
+              <div class="col-sm-10">
+                <input type="text" class="form-control" name='username' placeholder="enter username">
+              </div>
+            </div>
+            <div class="mb-3 row">
+              <!-- <label for="inputPassword" class="col-sm-2 col-form-label">Password</label> -->
+              <div class="col-sm-10">
+                <input type="password" class="form-control" id="inputPassword" name='password' placeholder="Password">
+              </div>
+            </div>
+          
+          
+          
+          
+            <div class="col-sm-10">
+              <input type="submit" class="btn btn-primary mb-3" value="Login"></input>
+            </div>
+          </form>
+        </div>
+      </div>
+      <div class="toggle-container">
+          <div class="toggle">
+              <div class="toggle-panel toggle-left">
+                  <h1>Welcome Back!</h1>
+                  <p>Enter your credentials to use all of site features</p>
+                  <button class="hidden" id="login" onclick="load_home()">Sign In</button>
+              </div>
+              <div class="toggle-panel toggle-right">
+                  <h1>Hello, User!</h1>
+                  <p>Register with your personal details to manage your assets</p>
+                  <button class="hidden" id="register" >Sign Up</button>
+              </div>
+          </div>
+      </div>
   </div>
+
+  {% else %}
+     <div class="jumbotron text-center">
+      <h1>WELCOME TO INVENTORY MANAGER, {{session.role}}</h1>
+      </div>
+
+
+    {% endif %}
+
+  
+
+ 
 {% endblock %}

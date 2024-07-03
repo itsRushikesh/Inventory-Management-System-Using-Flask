@@ -18,7 +18,12 @@
       </ul>
        <ul class="nav navbar-nav navbar-right">
               {% if session.logged_in %}
-                <li class="nav-item"><a class="nav-link" href="/dashboard">Dashboard</a></li>
+              {% if session.role != "Engineer" and session.role != "Manager" %}
+                  <li class="nav-item"><a class="nav-link" href="/dashboard">Admin-Dashboard</a></li>
+              {%else%}
+                  <li class="nav-item"><a class="nav-link" href="/dashboard">Dashboard</a></li>
+              {% endif %}
+
                 <li class="nav-item"><a class="nav-link" href="/logout">Logout</a></li>
               {% else %}
                 <li class="nav-item"><a class="nav-link" href="/register">Register</a></li>
@@ -28,3 +33,10 @@
             </ul>
     </div>
   </nav>
+
+  <style>
+        .nav-link.active {
+      color: #fff !important;
+      background: black !important;
+    }
+  </style>

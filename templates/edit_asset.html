@@ -1,7 +1,7 @@
 {% extends 'layout.html' %}
  
 {% block body %}
-  <h1>Edit Asset</h1>
+  <h1>Consume Asset</h1>
   {% from "includes/_formhelpers.html" import render_field %}
   <form method="POST" action="">
     <!-- <div class="form-group">
@@ -10,6 +10,6 @@
     <div class="form-group">
       {{ render_field(form.quantity, class_="form-control", id="editor") }}
     </div>
-    <p><input class="btn btn-primary" type="submit" value="Submit">
+    <p><input class="btn btn-primary" type="submit" value="consume">
   </form>
 {% endblock %}
